@@ -1,0 +1,4 @@
+(library
+ (name stun_lwt)
+ (public_name stun-lwt)
+ (libraries stun lwt lwt.unix cohttp-lwt cohttp-lwt-unix))

@@ -7,11 +7,11 @@ Pure OCaml implementation of the [Session Traversal Utilities for NAT (STUN)](st
 
 Before understanding STUN (and why it exists), you first need to know about Network Address Translation (NAT). NAT allows modifying network address information (primarily in the IP header) whilst a packet is in transit.
 
-Why would you want to do this? Originally it was more for convenience. Instead of having to update every device on a network if it moved, you would only update the NAT. More modern use cases are for preserving the limited amount fo IPv4 addresses.
+Why would you want to do this? Originally it was more for convenience. Instead of having to update every device on a network if it moved, you would only update the NAT. More modern use cases are for preserving the limited amount of IPv4 addresses.
 
 The most typical example involves having one public address (typically provided by an ISP) for multiple, internal, private addresses. The router's job is to transparently expose these devices with private addresses to the internet using the public address. The router then distinguishes between inbound packets and does the correct public-to-private translation.
 
-STUN is a tool used by other protocols (WebRTC, VoIP etc.) to help work around the NAT problem. When trying to establish peer-to-peer connections you want to know what the *outermost* public IP address and port number are that is for your device. The so-called **reflexive transport address**. Your device may be *many NATs deep*! [rfc5389](rfc5389) gives an example of 2.
+STUN is a tool used by other protocols (WebRTC, VoIP etc.) to help work around the NAT problem. When trying to establish peer-to-peer connections you want to know what the *outermost* public IP address and port number are for your device. The so-called **reflexive transport address**. Your device may be *many NATs deep*! [rfc5389](rfc5389) gives an example of 2:
 
 ```
                                /-----\
@@ -44,6 +44,13 @@ STUN is a tool used by other protocols (WebRTC, VoIP etc.) to help work around t
 
 
                  Figure 1: One Possible STUN Configuration
+```
+
+You can discover your *reflexive transport address* by:
+
+```
+opam pin . -yn
+dune exec -- ./example/lwt-unix-ip/main.exe
 ```
 
 ### Mirage Example

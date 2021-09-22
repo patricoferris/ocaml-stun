@@ -2,6 +2,9 @@
 opam-version: "2.0"
 synopsis: "Pure OCaml STUN Protocol for MirageOS Unikernels"
 description: ""
+maintainer: ["pf341@patricoferris.com"]
+authors: ["Patrick Ferris"]
+license: "ISC"
 depends: [
   "dune" {>= "2.9"}
   "stun"
@@ -9,7 +12,7 @@ depends: [
   "odoc" {with-doc}
 ]
 build: [
-  ["dune" "subst" "--root" "."] {dev}
+  ["dune" "subst"] {dev}
   [
     "dune"
     "build"
@@ -17,8 +20,7 @@ build: [
     name
     "-j"
     jobs
-    "--promote-install-files"
-    "false"
+    "--promote-install-files=false"
     "@install"
     "@runtest" {with-test}
     "@doc" {with-doc}

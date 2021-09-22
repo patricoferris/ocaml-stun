@@ -58,7 +58,7 @@ let pp ppf t =
 let equal a b =
   a.typ = b.typ && a.length = b.length && Cstruct.equal a.value b.value
 
-module type Attr = sig
+module type S = sig
   type t
 
   val attribute_type : attribute
@@ -72,7 +72,7 @@ module type Attr = sig
   val equal : t -> t -> bool
 end
 
-module Mapped_address : Attr = struct
+module Mapped_address = struct
   type t = { ip : Ipaddr.t; port : int }
 
   let attribute_type = MAPPED_ADDRESS
@@ -98,7 +98,7 @@ module Mapped_address : Attr = struct
         buff
     | { ip = V6 ip; port } ->
         let buff = Cstruct.create 20 in
-        Cstruct.set_uint8 buff 1 0x01;
+        Cstruct.set_uint8 buff 1 0x02;
         Cstruct.BE.set_uint16 buff 2 port;
         let ip1, ip2 = Ipaddr.V6.to_int64 ip in
         Cstruct.BE.set_uint64 buff 4 ip1;
@@ -172,6 +172,74 @@ module Xor_mapped_address = struct
 
   let pp ppf { ip; port } =
     Fmt.pf ppf "{ ip = %a; port = %i }" Ipaddr.pp ip port
+
+  let equal a b = a = b
+end
+
+module Message_integrity = struct
+  type t = Digestif.SHA1.t
+
+  let of_long_credentials ~username ~realm ~password (buff : Cstruct.t) =
+    let key =
+      Digestif.MD5.digest_string (username ^ ":" ^ realm ^ ":" ^ password)
+      |> Digestif.MD5.to_raw_string
+    in
+    Digestif.SHA1.hmac_bigstring ~key buff.buffer
+
+  let of_short_credentials ~password (buff : Cstruct.t) =
+    let key =
+      Digestif.MD5.digest_string password |> Digestif.MD5.to_raw_string
+    in
+    Digestif.SHA1.hmac_bigstring ~key buff.buffer
+end
+
+module Fingerprint = struct
+  (* Fingerprints are used to distinguish STUN packets
+     from other packets when multiplexed (e.g. RTP) *)
+  type t = Optint.t
+
+  let magic = Optint.of_int32 0x5354554el
+
+  let of_cstruct (buff : Cstruct.t) =
+    let t =
+      Checkseum.Crc32.(digest_bigstring buff.buffer buff.off buff.len default)
+    in
+    Optint.logxor t magic
+end
+
+module Error_code = struct
+  type t = { code : int; reason : string }
+
+  [%%cenum
+  type code =
+    (* Comprehension Required *)
+    | TRY_ALTERNATE [@id 300]
+    | BAD_REQUEST [@id 400]
+    | UNAUTHORIZED [@id 401]
+    | UNKNOWN_ATTRIBUTE [@id 420]
+    | STALE_NONCE [@id 438]
+    | SERVER_ERROR [@id 500]
+  [@@uint16_t]]
+
+  let attribute_type = ERROR_CODE
+
+  let of_cstruct buff =
+    let class_ = Cstruct.get_uint8 buff 2 in
+    let number = Cstruct.get_uint8 buff 3 in
+    let reason =
+      Cstruct.sub buff 4 (Cstruct.length buff - 4) |> Cstruct.to_string
+    in
+    Ok { code = (class_ * 100) + number; reason }
+
+  let to_cstruct { code; reason } =
+    let buff = Cstruct.create 4 in
+    let class_ = code / 100 in
+    let number = code mod 100 in
+    Cstruct.set_uint8 buff 2 class_;
+    Cstruct.set_uint8 buff 3 number;
+    Cstruct.append buff (Cstruct.of_string reason)
+
+  let pp ppf { code; reason } = Fmt.pf ppf "error(%i): %s" code reason
 
   let equal a b = a = b
 end

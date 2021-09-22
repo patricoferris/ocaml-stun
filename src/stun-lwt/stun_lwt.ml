@@ -40,14 +40,7 @@ struct
     let cs = P.to_cstruct v in
     Net.IO.write_cs oc cs
 
-  let read_packet (ic, _) =
-    let open Lwt.Infix in
+  let read_packet (ic, _) buff =
     Log.debug (fun f -> f "Reading packet");
-    Net.IO.read ic 1000 >|= fun s -> [ s ]
-  (* let rec aux lines =
-       (Net.IO.read_line ic) >>= function
-       | None -> Lwt.return @@ List.rev lines
-       | Some l -> aux (l :: lines)
-     in
-       aux [] *)
+    Net.IO.read_cs ic buff
 end

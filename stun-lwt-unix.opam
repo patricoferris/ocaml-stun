@@ -2,15 +2,18 @@
 opam-version: "2.0"
 synopsis: "Pure OCaml STUN Protocol for Unix machines"
 description: ""
+maintainer: ["pf341@patricoferris.com"]
+authors: ["Patrick Ferris"]
+license: "ISC"
 depends: [
   "dune" {>= "2.9"}
   "stun"
   "stun-lwt"
-  "mirage-types"
+  "cohttp-lwt-unix"
   "odoc" {with-doc}
 ]
 build: [
-  ["dune" "subst" "--root" "."] {dev}
+  ["dune" "subst"] {dev}
   [
     "dune"
     "build"
@@ -18,8 +21,7 @@ build: [
     name
     "-j"
     jobs
-    "--promote-install-files"
-    "false"
+    "--promote-install-files=false"
     "@install"
     "@runtest" {with-test}
     "@doc" {with-doc}

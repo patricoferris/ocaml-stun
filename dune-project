@@ -1,5 +1,10 @@
 (lang dune 2.9)
 
+(name stun)
+
+(license ISC)
+(authors "Patrick Ferris")
+(maintainers "pf341@patricoferris.com")
 
 (generate_opam_files true)
 
@@ -25,4 +30,4 @@
  (name stun-lwt-unix)
  (synopsis "Pure OCaml STUN Protocol for Unix machines")
  (description "")
- (depends stun stun-lwt mirage-types))
+ (depends stun stun-lwt cohttp-lwt-unix))

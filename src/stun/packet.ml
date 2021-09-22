@@ -71,7 +71,13 @@ module Make (R : Mirage_random.S) = struct
 
   let create ?g ~typ ~payload () =
     let txid = R.generate ?g 12 in
-    { typ; length = Cstruct.len payload; cookie = magic_cookie; txid; payload }
+    {
+      typ;
+      length = Cstruct.length payload;
+      cookie = magic_cookie;
+      txid;
+      payload;
+    }
 
   let to_cstruct { typ; length; cookie; txid; payload } =
     assert (cookie = magic_cookie);

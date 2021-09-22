@@ -22,18 +22,16 @@ let main () =
   in
   Client.connect client >>= fun conn ->
   Log.info (fun f -> f "Connection established...");
+  let buff = Cstruct.create 40 in
   Client.write_packet packet conn >>= fun () ->
-  Client.read_packet conn >>= fun s ->
-  let p =
-    Cstruct.of_string (String.concat "" s)
-    |> Client.P.of_cstruct |> Result.get_ok
-  in
+  Client.read_packet conn buff >>= fun () ->
+  let p = Client.P.of_cstruct buff |> Result.get_ok in
   let attr = Attribute.of_cstruct p.payload in
   let xor =
     Attribute.Xor_mapped_address.of_cstruct attr.value |> Result.get_ok
   in
   let ip = Attribute.Xor_mapped_address.decode ~txid:p.txid xor in
-  Fmt.pr "Your IP: %a" Attribute.Xor_mapped_address.pp ip;
+  Log.info (fun f -> f "Your IP: %a" Attribute.Xor_mapped_address.pp ip);
   Lwt.return ()
 
 let () = Lwt_main.run (main ())

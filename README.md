@@ -1,7 +1,7 @@
 ocaml-stun
 ----------
 
-Pure OCaml implementation of the [Session Traversal Utilities for NAT (STUN)](stun) protocol (STUN).
+Pure OCaml implementation of the [Session Traversal Utilities for NAT (STUN)][stun] protocol (STUN).
 
 ## What is STUN?
 
@@ -11,7 +11,7 @@ Why would you want to do this? Originally it was more for convenience. Instead o
 
 The most typical example involves having one public address (typically provided by an ISP) for multiple, internal, private addresses. The router's job is to transparently expose these devices with private addresses to the internet using the public address. The router then distinguishes between inbound packets and does the correct public-to-private translation.
 
-STUN is a tool used by other protocols (WebRTC, VoIP etc.) to help work around the NAT problem. When trying to establish peer-to-peer connections you want to know what the *outermost* public IP address and port number are for your device. The so-called **reflexive transport address**. Your device may be *many NATs deep*! [rfc5389](rfc5389) gives an example of 2:
+STUN is a tool used by other protocols (WebRTC, VoIP etc.) to help work around the NAT problem. When trying to establish peer-to-peer connections you want to know what the *outermost* public IP address and port number are for your device. The so-called **reflexive transport address**. Your device may be *many NATs deep*! [rfc5389][rfc5389] gives an example of 2:
 
 ```
                                /-----\

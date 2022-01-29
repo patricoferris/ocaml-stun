@@ -1,4 +1,0 @@
-(library
- (name stun_mirage)
- (public_name stun-mirage)
- (libraries mirage-types stun))

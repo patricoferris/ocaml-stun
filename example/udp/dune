@@ -1,0 +1,3 @@
+(executable
+ (name main)
+ (libraries stun eio_main logs.fmt fmt.tty))

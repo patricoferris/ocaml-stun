@@ -14,5 +14,23 @@ val stuns_service : Resolver.service
 
 module Packet = Packet
 
-module Attribute = Attribute
+
 (** {2 Attributes} *)
+
+module Attribute = Attribute
+
+(** {2 STUN Client} *)
+
+module Client : sig
+  type t
+
+  type conn = <Eio.Flow.two_way; Eio.Flow.close>
+
+  val create : uri:Uri.t -> int -> t
+
+  val connect : sw:Eio.Std.Switch.t -> Eio.Net.t -> Eio.Net.Sockaddr.t -> conn
+
+  val write_packet : conn -> Packet.t -> unit
+
+  val read_packet : conn -> Cstruct.t -> (Packet.t, [`Msg of string]) result
+end

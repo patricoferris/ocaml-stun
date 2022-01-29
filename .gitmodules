@@ -1,0 +1,7 @@
+[submodule "eioio"]
+	path = eioio
+	url = https://github.com/patricoferris/eioio
+[submodule "ocaml-conduit"]
+	path = ocaml-conduit
+	url = https://github.com/patricoferris/ocaml-conduit
+	branch = eio

@@ -5,23 +5,28 @@ let default_tls_port = 5349
 module Packet = Packet
 module Attribute = Attribute
 
-let stun_service = Resolver.{ name = "stun"; port = default_port; tls = false }
-
-let stuns_service =
-  Resolver.{ name = "stuns"; port = default_tls_port; tls = true }
-
 module Client = struct
   let src = Logs.Src.create "stun.client" ~doc:"Stun client"
   module Log = (val Logs.src_log src : Logs.LOG)
 
   type t = { uri : Uri.t; port : int }
 
-  type conn = <Eio.Flow.two_way; Eio.Flow.close>
+  type conn = <Eio.Flow.two_way>
 
   let create ~uri port = { uri; port }
 
-  let connect ~sw net sockaddr = 
-    Eio.Net.connect ~sw net sockaddr
+  let init ~sw net { uri; port } = 
+    let sockaddr = Eio.Net.resolve ~sw net uri in
+    Log.debug (fun f -> f "Resolved %a to %a" Uri.pp uri Eio.Net.Sockaddr.pp sockaddr);
+    match sockaddr with
+      | `Tcp (ip, _) ->
+        let conn = Eio.Net.connect ~sw net (`Tcp (ip, port)) in
+        (conn :> <Eio.Flow.two_way>)
+      | `Unix _ as sockaddr -> 
+        let conn = Eio.Net.connect ~sw net sockaddr in
+        (conn :> <Eio.Flow.two_way>)
+      | `Udp (ip, _) -> 
+        Eio.Net.init ~sw net (`Udp (ip, port))
 
   let write_packet dst v =
     let cs = Packet.to_cstruct v in

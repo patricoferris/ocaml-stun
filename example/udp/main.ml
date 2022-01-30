@@ -3,20 +3,22 @@ open Stun
 let src = Logs.Src.create "stun.client.example" ~doc:"Stun Client"
 module Log = (val Logs.src_log src : Logs.LOG)
 
+let info s = Log.info (fun f -> f "%s" s)
+
 let () =
   Fmt_tty.setup_std_outputs ();
-  Logs.set_level ~all:true (Some Logs.Info);
+  Logs.set_level ~all:true (Some Logs.Debug);
   Logs.set_reporter (Logs_fmt.reporter ())
 
 let packet g = Packet.(create ~g ~typ:Message.(Binding Request) ~payload:Cstruct.empty ())
 
 let main ~sw net random =
-  Log.info (fun f -> f "Starting stun connection...");
-  let _client =
-    Client.create ~uri:(Uri.of_string "stun://stun.l.google.com") 19302
+  info "Starting stun connection...";
+  let client =
+    Client.create ~uri:(Uri.of_string "stun.l.google.com") 19302
   in
-  let conn = Client.connect ~sw net (`Tcp (Eio.Net.Ipaddr.V4.loopback, 9090)) in
-  Log.info (fun f -> f "Connection established...");
+  let conn = Client.init ~sw net client in
+  info "Connection established...";
   let buff = Cstruct.create 40 in
   Client.write_packet conn (packet random);
   match Client.read_packet conn buff with

@@ -1,6 +1,0 @@
-(library
- (name stun_lwt_unix)
- (public_name stun-lwt-unix)
- (libraries stun stun-lwt cohttp-lwt-unix)
- (preprocess
-  (pps ppx_sexp_conv)))

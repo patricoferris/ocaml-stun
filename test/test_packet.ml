@@ -8,7 +8,7 @@ module Random : Mirage_random.S = struct
     Cstruct.mapi (fun i _ -> char_of_int i) buff
 end
 
-module P = Packet.Make (Random)
+module P = Packet
 
 let list_to_cstruct xs =
   let open Cstruct in

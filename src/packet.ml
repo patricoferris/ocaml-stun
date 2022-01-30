@@ -53,51 +53,49 @@ type t = {
   payload : Cstruct.t;
 }
 
-module Make (R : Mirage_random.S) = struct
-  (* The magic cookie field MUST contain the fixed value 0x2112A442 in
-     network byte order. *)
+(* The magic cookie field MUST contain the fixed value 0x2112A442 in
+    network byte order. *)
 
-  let ( >>= ) a f = Result.map f a
+let ( >>= ) a f = Result.map f a
 
-  let txid_length_bits = 96
+let txid_length_bits = 96
 
-  let of_cstruct buff =
-    let typ = Message.of_cstruct buff in
-    let length = Cstruct.BE.get_uint16 buff 2 in
-    let cookie = Cstruct.BE.get_uint32 buff 4 in
-    let txid = Cstruct.sub buff 8 12 in
-    let payload = Cstruct.sub buff 20 length in
-    typ >>= fun typ -> { typ; length; cookie; txid; payload }
+let of_cstruct buff =
+  let typ = Message.of_cstruct buff in
+  let length = Cstruct.BE.get_uint16 buff 2 in
+  let cookie = Cstruct.BE.get_uint32 buff 4 in
+  let txid = Cstruct.sub buff 8 12 in
+  let payload = Cstruct.sub buff 20 length in
+  typ >>= fun typ -> { typ; length; cookie; txid; payload }
 
-  let create ?g ~typ ~payload () =
-    let txid = R.generate ?g 12 in
-    {
-      typ;
-      length = Cstruct.length payload;
-      cookie = magic_cookie;
-      txid;
-      payload;
-    }
+let create ~g ~typ ~payload () =
+  let txid = Eio.Random.generate g 12 in
+  {
+    typ;
+    length = Cstruct.length payload;
+    cookie = magic_cookie;
+    txid;
+    payload;
+  }
 
-  let to_cstruct { typ; length; cookie; txid; payload } =
-    assert (cookie = magic_cookie);
-    assert (Cstruct.length txid = 12);
-    let buff = Cstruct.create 20 in
-    let typ = Message.to_cstruct typ in
-    Cstruct.blit typ 0 buff 0 2;
-    Cstruct.BE.set_uint16 buff 2 length;
-    Cstruct.BE.set_uint32 buff 4 cookie;
-    Cstruct.blit txid 0 buff 8 12;
-    Cstruct.append buff payload
+let to_cstruct { typ; length; cookie; txid; payload } =
+  assert (cookie = magic_cookie);
+  assert (Cstruct.length txid = 12);
+  let buff = Cstruct.create 20 in
+  let typ = Message.to_cstruct typ in
+  Cstruct.blit typ 0 buff 0 2;
+  Cstruct.BE.set_uint16 buff 2 length;
+  Cstruct.BE.set_uint32 buff 4 cookie;
+  Cstruct.blit txid 0 buff 8 12;
+  Cstruct.append buff payload
 
-  let pp ppf { typ; length; cookie; txid; payload } =
-    Fmt.pf ppf
-      "{ type = %a; length = %i; cookie = %ld; txid = %a; payload = %a}"
-      Message.pp typ length cookie Cstruct.hexdump_pp txid Cstruct.hexdump_pp
-      payload
+let pp ppf { typ; length; cookie; txid; payload } =
+  Fmt.pf ppf
+    "{ type = %a; length = %i; cookie = %ld; txid = %a; payload = %a}"
+    Message.pp typ length cookie Cstruct.hexdump_pp txid Cstruct.hexdump_pp
+    payload
 
-  let equal a b =
-    a.typ = b.typ && a.length = b.length && a.cookie = b.cookie
-    && Cstruct.equal a.txid b.txid
-    && Cstruct.equal a.payload b.payload
-end
+let equal a b =
+  a.typ = b.typ && a.length = b.length && a.cookie = b.cookie
+  && Cstruct.equal a.txid b.txid
+  && Cstruct.equal a.payload b.payload

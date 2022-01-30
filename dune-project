@@ -10,24 +10,6 @@
 
 (package
  (name stun)
- (synopsis "Pure OCaml STUN Protocol")
+ (synopsis "Pure, direct-style OCaml STUN Protocol")
  (description "")
- (depends cstruct))
-
-(package
- (name stun-mirage)
- (synopsis "Pure OCaml STUN Protocol for MirageOS Unikernels")
- (description "")
- (depends stun mirage-types))
-
-(package
- (name stun-lwt)
- (synopsis "Pure OCaml STUN Protocol using Lwt")
- (description "")
- (depends stun mirage-types))
-
-(package
- (name stun-lwt-unix)
- (synopsis "Pure OCaml STUN Protocol for Unix machines")
- (description "")
- (depends stun stun-lwt cohttp-lwt-unix))
+ (depends eio))

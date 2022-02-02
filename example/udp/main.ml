@@ -10,7 +10,7 @@ let () =
   Logs.set_level ~all:true (Some Logs.Debug);
   Logs.set_reporter (Logs_fmt.reporter ())
 
-let packet g = Packet.(create ~g ~typ:Message.(Binding Request) ~payload:Cstruct.empty ())
+let packet secure_random = Packet.(create ~secure_random ~typ:Message.(Binding Request) ~payload:Cstruct.empty ())
 
 let main ~sw net random =
   info "Starting stun connection...";
@@ -34,4 +34,4 @@ let main ~sw net random =
 let () = 
   Eio_main.run @@ fun env ->
   Eio.Std.Switch.run @@ fun sw ->
-  (main ~sw (Eio.Stdenv.net env) (Eio.Stdenv.random env))
+  (main ~sw (Eio.Stdenv.net env) (Eio.Stdenv.secure_random env))

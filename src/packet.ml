@@ -68,8 +68,9 @@ let of_cstruct buff =
   let payload = Cstruct.sub buff 20 length in
   typ >>= fun typ -> { typ; length; cookie; txid; payload }
 
-let create ~g ~typ ~payload () =
-  let txid = Eio.Random.generate g 12 in
+let create ~secure_random ~typ ~payload () =
+  let txid = Cstruct.create 12 in
+  let _read = Eio.Flow.read_exact secure_random txid in
   {
     typ;
     length = Cstruct.length payload;

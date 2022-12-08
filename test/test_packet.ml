@@ -1,13 +1,4 @@
 open Stun
-
-module Random : Mirage_random.S = struct
-  type g = unit
-
-  let generate ?g:_ len =
-    let buff = Cstruct.create len in
-    Cstruct.mapi (fun i _ -> char_of_int i) buff
-end
-
 module P = Packet
 
 let list_to_cstruct xs =
@@ -65,7 +56,6 @@ let xor_packet =
     ]
 
 let packet = Alcotest.testable P.pp P.equal
-
 let attribute = Alcotest.testable Attribute.pp Attribute.equal
 
 let xor_mapped_address =
@@ -73,7 +63,6 @@ let xor_mapped_address =
     Attribute.Xor_mapped_address.equal
 
 let cstruct = Alcotest.testable Cstruct.hexdump_pp Cstruct.equal
-
 let err = Alcotest.of_pp (fun ppf (`Msg m) -> Fmt.pf ppf "%s" m)
 
 let test_packet () =
@@ -164,8 +153,7 @@ let test_xor_mapped_attr () =
     }
   in
   let expect =
-    Xor_mapped_address.
-      { ip = V4 (Ipaddr.V4.of_string_exn "192.168.1.35"); port = 63524 }
+    Xor_mapped_address.v ~ip:(Cstruct.of_string "\192\168\001\035") ~port:63524
   in
   let xor = Xor_mapped_address.of_cstruct attribute.value in
   let xor = Result.map (Xor_mapped_address.decode ~txid:packet.txid) xor in
@@ -192,13 +180,15 @@ let test_xor_mapped_attr_encode_decode () =
 
 let test_xor_mapped_ipv6 () =
   let open Attribute in
-  let xor =
-    Xor_mapped_address.
-      {
-        ip = V6 (Ipaddr.V6.of_string_exn "fe80::dc2b:44ff:fe20:6009");
-        port = 21254;
-      }
+  let ip =
+    (* fe80::dc2b:44ff:fe20:6009 *)
+    let first, second = (-108086391056891904L, -31432695L) in
+    let buf = Cstruct.create 16 in
+    Cstruct.BE.set_uint64 buf 0 first;
+    Cstruct.BE.set_uint64 buf 8 second;
+    buf
   in
+  let xor = Xor_mapped_address.v ~ip ~port:21254 in
   let txid =
     list_to_cstruct
       [ 0x01; 0x02; 0x03; 0x04; 0x01; 0x02; 0x03; 0x04; 0x01; 0x02; 0x03; 0x04 ]

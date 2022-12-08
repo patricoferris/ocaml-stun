@@ -1,3 +1,5 @@
+open Eio
+
 val default_port : int
 (** The default UDP port for stun connections *)
 
@@ -8,7 +10,6 @@ val default_tls_port : int
 
 module Packet = Packet
 
-
 (** {2 Attributes} *)
 
 module Attribute = Attribute
@@ -18,13 +19,12 @@ module Attribute = Attribute
 module Client : sig
   type t
 
-  type conn = <Eio.Flow.two_way>
+  type conn =
+    | Flow of Flow.two_way
+    | Datagram of Net.datagram_socket * Net.Sockaddr.datagram
 
   val create : uri:Uri.t -> int -> t
-
   val init : sw:Eio.Std.Switch.t -> Eio.Net.t -> t -> conn
-
   val write_packet : conn -> Packet.t -> unit
-
-  val read_packet : conn -> Cstruct.t -> (Packet.t, [`Msg of string]) result
+  val read_packet : conn -> Cstruct.t -> (Packet.t, [ `Msg of string ]) result
 end

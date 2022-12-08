@@ -2,8 +2,3 @@
  (name main)
  (modules main)
  (libraries stun eio_main logs.fmt fmt.tty))
-
-(executable
- (name resolve)
- (modules resolve)
- (libraries eio_main logs.fmt fmt.tty))

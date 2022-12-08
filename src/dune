@@ -1,6 +1,6 @@
 (library
  (name stun)
  (public_name stun)
- (libraries eio logs digestif checkseum mirage-types)
+ (libraries eio logs uri digestif checkseum)
  (preprocess
   (pps ppx_cstruct)))

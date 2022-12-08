@@ -1,23 +1,8 @@
-(* 
-   0                   1                   2                   3
-   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  |0 0|     STUN Message Type     |         Message Length        |
-  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  |                         Magic Cookie                          |
-  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  |                                                               |
-  |                     Transaction ID (96 bits)                  |
-  |                                                               |
-  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-*)
-
 let magic_cookie = 0x2112A442l
 
 module Message = struct
   (* Note: this module assumes 16 bits even if the message is 14 + two zeros *)
   type class_ = Request | Indication | Response | Error
-
   type t = Binding of class_
 
   (* Everything in RFC5389 is a binding request i.e. LSB = 1 *)
@@ -57,7 +42,6 @@ type t = {
     network byte order. *)
 
 let ( >>= ) a f = Result.map f a
-
 let txid_length_bits = 96
 
 let of_cstruct buff =
@@ -68,15 +52,10 @@ let of_cstruct buff =
   let payload = Cstruct.sub buff 20 length in
   typ >>= fun typ -> { typ; length; cookie; txid; payload }
 
-let create ~g ~typ ~payload () =
-  let txid = Eio.Random.generate g 12 in
-  {
-    typ;
-    length = Cstruct.length payload;
-    cookie = magic_cookie;
-    txid;
-    payload;
-  }
+let create ~random ~typ ~payload () =
+  let txid = Cstruct.create 12 in
+  Eio.Flow.read_exact random txid;
+  { typ; length = Cstruct.length payload; cookie = magic_cookie; txid; payload }
 
 let to_cstruct { typ; length; cookie; txid; payload } =
   assert (cookie = magic_cookie);
@@ -90,8 +69,7 @@ let to_cstruct { typ; length; cookie; txid; payload } =
   Cstruct.append buff payload
 
 let pp ppf { typ; length; cookie; txid; payload } =
-  Fmt.pf ppf
-    "{ type = %a; length = %i; cookie = %ld; txid = %a; payload = %a}"
+  Fmt.pf ppf "{ type = %a; length = %i; cookie = %ld; txid = %a; payload = %a}"
     Message.pp typ length cookie Cstruct.hexdump_pp txid Cstruct.hexdump_pp
     payload
 

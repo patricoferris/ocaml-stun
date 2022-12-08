@@ -37,43 +37,51 @@ val comprehension_required : attribute -> bool
       understood.*)
 
 val of_cstruct : Cstruct.t -> t
-
 val to_cstruct : t -> Cstruct.t
-
 val pp : t Fmt.t
-
 val equal : t -> t -> bool
 
 module type S = sig
   type t
 
   val attribute_type : attribute
-
   val of_cstruct : Cstruct.t -> (t, [ `Msg of string ]) result
-
   val to_cstruct : t -> Cstruct.t
-
   val pp : t Fmt.t
-
   val equal : t -> t -> bool
 end
 
 module Mapped_address : sig
-  type t = { ip : Ipaddr.t; port : int }
+  type t
   (** The mapped address is the reflexive, transport address of the client. *)
+
+  val ip : t -> Cstruct.t
+  (** A buffer filled with the IP bytes *)
+
+  val port : t -> int
+  (** The port number *)
+
+  val v : ip:Cstruct.t -> port:int -> t
 
   include S with type t := t
 end
 
 module Xor_mapped_address : sig
-  type t = { ip : Ipaddr.t; port : int }
+  type t
   (** Like a {! Mapped_address.t} but encoded with xor, reading from a buffer 
         does not automatically decode the address. *)
+
+  val ip : t -> Cstruct.t
+  (** A buffer filled with the IP bytes *)
+
+  val port : t -> int
+  (** The port number *)
+
+  val v : ip:Cstruct.t -> port:int -> t
 
   include S with type t := t
 
   val decode : txid:Cstruct.t -> t -> t
-
   val encode : txid:Cstruct.t -> t -> t
 end
 

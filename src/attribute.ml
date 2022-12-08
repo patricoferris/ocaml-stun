@@ -1,3 +1,5 @@
+open Eio
+
 [%%cenum
 type attribute =
   (* Comprehension Required *)
@@ -62,19 +64,16 @@ module type S = sig
   type t
 
   val attribute_type : attribute
-
   val of_cstruct : Cstruct.t -> (t, [ `Msg of string ]) result
-
   val to_cstruct : t -> Cstruct.t
-
   val pp : t Fmt.t
-
   val equal : t -> t -> bool
 end
 
 module Mapped_address = struct
-  type t = { ip : Ipaddr.t; port : int }
+  type t = { ip : Cstruct.t; port : int }
 
+  let v ~ip ~port = { port; ip }
   let attribute_type = MAPPED_ADDRESS
 
   let of_cstruct buff =
@@ -82,38 +81,42 @@ module Mapped_address = struct
     let port = Cstruct.BE.get_uint16 buff 2 in
     match family with
     | 0x01 ->
-        let ip = Cstruct.BE.get_uint32 buff 4 in
-        Ok { ip = V4 (Ipaddr.V4.of_int32 ip); port }
+        let ip = Cstruct.sub buff 4 4 in
+        Ok { ip; port }
     | 0x02 ->
-        let ip = Cstruct.BE.(get_uint64 buff 4, get_uint64 buff 12) in
-        Ok { ip = V6 (Ipaddr.V6.of_int64 ip); port }
+        let ip = Cstruct.sub buff 4 16 in
+        Ok { ip; port }
     | _ -> Error (`Msg "Unknown IP family")
 
-  let to_cstruct = function
-    | { ip = V4 ip; port } ->
-        let buff = Cstruct.create 8 in
+  let to_cstruct { ip; port } =
+    match Cstruct.length ip with
+    | 4 ->
+        let buff = Cstruct.create 4 in
         Cstruct.set_uint8 buff 1 0x01;
         Cstruct.BE.set_uint16 buff 2 port;
-        Cstruct.BE.set_uint32 buff 4 (Ipaddr.V4.to_int32 ip);
-        buff
-    | { ip = V6 ip; port } ->
-        let buff = Cstruct.create 20 in
+        Cstruct.append buff ip
+    | 16 ->
+        let buff = Cstruct.create 4 in
         Cstruct.set_uint8 buff 1 0x02;
         Cstruct.BE.set_uint16 buff 2 port;
-        let ip1, ip2 = Ipaddr.V6.to_int64 ip in
-        Cstruct.BE.set_uint64 buff 4 ip1;
-        Cstruct.BE.set_uint64 buff 12 ip2;
-        buff
+        Cstruct.append buff ip
+    | _ -> failwith "Unexpected IP Address length!"
 
   let pp ppf { ip; port } =
-    Fmt.pf ppf "{ ip = %a; port = %i }" Ipaddr.pp ip port
+    let ip = Cstruct.to_string ip |> Net.Ipaddr.of_raw in
+    Fmt.pf ppf "Mapped Address@.ip: %a@.port: %i@." Net.Ipaddr.pp ip port
 
-  let equal a b = a = b
+  let equal a b = Int.equal a.port b.port && Cstruct.equal a.ip b.ip
+  let ip t = t.ip
+  let port t = t.port
 end
 
 module Xor_mapped_address = struct
-  type t = { ip : Ipaddr.t; port : Cstruct.uint16 }
+  type t = { ip : Cstruct.t; port : Cstruct.uint16 }
 
+  let v ~ip ~port = { port; ip }
+  let ip t = t.ip
+  let port t = t.port
   let attribute_type = XOR_MAPPED_ADDRESS
 
   (* https://datatracker.ietf.org/doc/html/rfc5389#section-15.2 -- host byte order ? ? ? ? *)
@@ -121,24 +124,15 @@ module Xor_mapped_address = struct
     let port =
       t.port lxor Int32.(to_int @@ shift_right Packet.magic_cookie 16)
     in
-    match t.ip with
-    | V4 ip ->
+    match Cstruct.length t.ip with
+    | 4 ->
         let ip =
-          Int32.(logxor (Ipaddr.V4.to_int32 ip) Packet.magic_cookie)
-          |> Ipaddr.V4.of_int32
+          Int32.(logxor (Cstruct.BE.get_uint32 t.ip 0) Packet.magic_cookie)
         in
-        { ip = V4 ip; port }
-    | V6 ip ->
-        (* TODO... *)
-        (* let xor1, xor2 =
-             let buff = Cstruct.create 16 in
-             Cstruct.BE.set_uint32 buff 0 Packet.magic_cookie;
-             Cstruct.blit txid 0 buff 4 12;
-             Cstruct.BE.get_uint64 buff 0, Cstruct.BE.get_uint64 buff 8
-           in
-           let ip1, ip2 = Ipaddr.V6.to_int64 ip in
-           let ip = Ipaddr.V6.of_int64 (Int64.logxor ip1 xor1, Int64.logxor ip2 xor2) in *)
-        { ip = V6 ip; port }
+        let buf = Cstruct.create 4 in
+        Cstruct.BE.set_uint32 buf 0 ip;
+        { ip = buf; port }
+    | _ -> t (* TODO !!!! *)
 
   let encode ~txid t = decode ~txid t
 
@@ -147,33 +141,32 @@ module Xor_mapped_address = struct
     let port = Cstruct.BE.get_uint16 buff 2 in
     match family with
     | 0x01 ->
-        let ip = Cstruct.BE.get_uint32 buff 4 in
-        Ok { ip = V4 (Ipaddr.V4.of_int32 ip); port }
+        let ip = Cstruct.sub buff 4 4 in
+        Ok { ip; port }
     | 0x02 ->
-        let ip = Cstruct.BE.(get_uint64 buff 4, get_uint64 buff 12) in
-        Ok { ip = V6 (Ipaddr.V6.of_int64 ip); port }
+        let ip = Cstruct.sub buff 4 16 in
+        Ok { ip; port }
     | _ -> Error (`Msg "Unknown IP family")
 
-  let to_cstruct = function
-    | { ip = V4 ip; port } ->
+  let to_cstruct { ip; port } =
+    match Cstruct.length ip with
+    | 4 ->
+        let buff = Cstruct.create 4 in
+        Cstruct.set_uint8 buff 1 0x01;
+        Cstruct.BE.set_uint16 buff 2 port;
+        Cstruct.append buff ip
+    | 16 ->
         let buff = Cstruct.create 8 in
         Cstruct.set_uint8 buff 1 0x01;
         Cstruct.BE.set_uint16 buff 2 port;
-        Cstruct.BE.set_uint32 buff 4 (Ipaddr.V4.to_int32 ip);
-        buff
-    | { ip = V6 ip; port } ->
-        let buff = Cstruct.create 20 in
-        Cstruct.set_uint8 buff 1 0x01;
-        Cstruct.BE.set_uint16 buff 2 port;
-        let ip1, ip2 = Ipaddr.V6.to_int64 ip in
-        Cstruct.BE.set_uint64 buff 4 ip1;
-        Cstruct.BE.set_uint64 buff 12 ip2;
-        buff
+        Cstruct.append buff ip
+    | _ -> invalid_arg "Ip Address size"
 
   let pp ppf { ip; port } =
-    Fmt.pf ppf "{ ip = %a; port = %i }" Ipaddr.pp ip port
+    let ip = Cstruct.to_string ip |> Net.Ipaddr.of_raw in
+    Fmt.pf ppf "XOR Mapped Address@.ip: %a@.port: %i@." Net.Ipaddr.pp ip port
 
-  let equal a b = a = b
+  let equal a b = Int.equal a.port b.port && Cstruct.equal a.ip b.ip
 end
 
 module Message_integrity = struct
@@ -240,6 +233,5 @@ module Error_code = struct
     Cstruct.append buff (Cstruct.of_string reason)
 
   let pp ppf { code; reason } = Fmt.pf ppf "error(%i): %s" code reason
-
   let equal a b = a = b
 end

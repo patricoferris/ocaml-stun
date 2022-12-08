@@ -1,4 +1,0 @@
-(library
- (name stun_lwt)
- (public_name stun-lwt)
- (libraries stun lwt cohttp-lwt))

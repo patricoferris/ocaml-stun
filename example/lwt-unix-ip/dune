@@ -1,3 +1,0 @@
-(executable
- (name main)
- (libraries stun-lwt-unix fmt.tty))
